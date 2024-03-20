@@ -1,0 +1,71 @@
+server:
+  port: 9090
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-00350800.okta.com/oauth2/default
+      client:
+        registration:
+          internal-client:
+            provider: okta
+            authorization-grant-type: client_credentials
+            scope: openid, profile, email, offline_access
+            client-id: 0oafniiadx2HSO8Ml5d7
+            client-secret: gytkwGRj0Np6knAKsKfaxzWyCwFFSwDWylmN-dznOnXROzDNYI7WGysTCQbmnu2K
+  application:
+    name: GatewayApi
+  config:
+    import: configserver:http://localhost:9296
+  cloud:
+   gateway:
+       routes:
+          - id: OrderService
+            uri: lb://OrderService
+            predicates:
+              - Path=/api/v1/orders/**
+            filters:
+            - name: CircuitBreaker
+              args:
+                name: OrderService
+                fallbackUri: forward:/orderServiceFallBack
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1
+                redis-rate-limiter.burstCapacity: 1
+
+          - id: ProductService
+            uri: lb://ProductService
+            predicates:
+              - Path=/api/v1/products/**
+            filters:
+              - name: CircuitBreaker
+                args:
+                  name: ProductService
+                  fallbackUri: forward:/productServiceFallBack
+              - name: RequestRateLimiter
+                args:
+                 redis-rate-limiter.replenishRate: 1
+                 redis-rate-limiter.burstCapacity: 1
+
+          - id: PaymentService
+            uri: lb://PaymentService
+            predicates:
+              - Path=/api/v1/payment/**
+            filters:
+              - name: CircuitBreaker
+                args:
+                  name: PaymentService
+                  fallbackUri: forward:/paymentServiceFallBack
+              - name: RequestRateLimiter
+                args:
+                  redis-rate-limiter.replenishRate: 1
+                  redis-rate-limiter.burstCapacity: 1
+okta:
+  oauth2:
+   issuer: https://dev-00350800.okta.com/oauth2/default
+   audience: api://default
+   client-id: 0oafniiadx2HSO8Ml5d7
+   client-secret: gytkwGRj0Np6knAKsKfaxzWyCwFFSwDWylmN-dznOnXROzDNYI7WGysTCQbmnu2K
+   scopes: openid, profile, email, offline_access
